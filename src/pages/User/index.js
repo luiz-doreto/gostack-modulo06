@@ -14,6 +14,8 @@ import {
     Info,
     Title,
     Author,
+    Loading,
+    TouchableItem,
 } from './styles';
 
 export default class User extends Component {
@@ -24,11 +26,15 @@ export default class User extends Component {
     static propTypes = {
         navigation: PropTypes.shape({
             getParam: PropTypes.func,
+            navigate: PropTypes.func,
         }).isRequired,
     };
 
     state = {
         stars: [],
+        loading: true,
+        refreshing: false,
+        page: 1,
     };
 
     async componentDidMount() {
@@ -37,12 +43,42 @@ export default class User extends Component {
 
         const response = await api.get(`/users/${user.login}/starred`);
 
-        this.setState({ stars: response.data });
+        this.setState({ stars: response.data, loading: false });
     }
+
+    loadMore = async () => {
+        const { navigation } = this.props;
+        const { stars, page } = this.state;
+        const user = navigation.getParam('user');
+
+        const response = await api.get(
+            `/users/${user.login}/starred?page=${page + 1}`
+        );
+
+        this.setState({ stars: [...stars, ...response.data], page: page + 1 });
+    };
+
+    refreshList = async () => {
+        const { navigation } = this.props;
+        const user = navigation.getParam('user');
+
+        this.setState({ refreshing: true });
+
+        const response = await api.get(`/users/${user.login}/starred`);
+
+        this.setState({ stars: response.data, refreshing: false });
+    };
+
+    openStarred = repo => {
+        const { navigation } = this.props;
+        const { name: repoName, html_url: repoUrl } = repo;
+
+        navigation.navigate('Starred', { repoName, repoUrl });
+    };
 
     render() {
         const { navigation } = this.props;
-        const { stars } = this.state;
+        const { stars, loading, refreshing } = this.state;
         const user = navigation.getParam('user');
 
         return (
@@ -52,22 +88,37 @@ export default class User extends Component {
                     <Name>{user.name}</Name>
                     <Bio>{user.bio}</Bio>
                 </Header>
-
-                <Stars
-                    data={stars}
-                    keyExtractor={star => String(star.id)}
-                    renderItem={({ item }) => (
-                        <Starred>
-                            <OwnerAvatar
-                                source={{ uri: item.owner.avatar_url }}
-                            />
-                            <Info>
-                                <Title>{item.name}</Title>
-                                <Author>{item.owner.login}</Author>
-                            </Info>
-                        </Starred>
-                    )}
-                />
+                {loading ? (
+                    <Loading />
+                ) : (
+                    <>
+                        <Stars
+                            onEndReachedThereshold={0.2}
+                            onEndReached={this.loadMore}
+                            onRefresh={this.refreshList}
+                            refreshing={refreshing}
+                            data={stars}
+                            keyExtractor={star => String(star.id)}
+                            renderItem={({ item }) => (
+                                <Starred>
+                                    <TouchableItem
+                                        onPress={() => this.openStarred(item)}
+                                    >
+                                        <OwnerAvatar
+                                            source={{
+                                                uri: item.owner.avatar_url,
+                                            }}
+                                        />
+                                        <Info>
+                                            <Title>{item.name}</Title>
+                                            <Author>{item.owner.login}</Author>
+                                        </Info>
+                                    </TouchableItem>
+                                </Starred>
+                            )}
+                        />
+                    </>
+                )}
             </Container>
         );
     }

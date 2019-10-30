@@ -46,7 +46,6 @@ export const Starred = styled.View`
     border-radius: 4px;
     padding: 10px 15px;
     margin-bottom: 20px;
-    flex-direction: row;
     align-items: center;
 `;
 
@@ -72,4 +71,12 @@ export const Author = styled.Text`
     font-size: 13px;
     color: #666;
     margin-top: 2px;
+`;
+
+export const Loading = styled.ActivityIndicator`
+    margin-top: 20px;
+`;
+
+export const TouchableItem = styled.TouchableOpacity`
+    flex-direction: row;
 `;
